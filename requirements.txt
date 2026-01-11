@@ -15,7 +15,8 @@ sentence-transformers>=2.2.0
 
 # LLM APIs
 anthropic>=0.18.0
-openai>=1.0.0  # Optional, for OpenAI embeddings
+openai>=1.0.0  # Also used for Groq (Llama) via compatible API
+google-generativeai>=0.3.0  # For Gemini
 
 # Web UI
 streamlit>=1.28.0
