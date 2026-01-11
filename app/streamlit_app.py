@@ -275,6 +275,7 @@ with tab1:
         with sample_cols[i]:
             if st.button(short_labels[i], key=f"sample_{i}", help=sample_q, use_container_width=True):
                 st.session_state.selected_question = sample_q
+                st.rerun()
 
     default_q = st.session_state.selected_question if st.session_state.selected_question else ""
     question = st.text_input(
@@ -407,14 +408,17 @@ with tab2:
     st.markdown("### Does Model Choice Matter?")
     st.markdown("*Wang's paper uses only OpenAI. Let's test external validity across model families.*")
 
-    st.markdown("##### Sample questions:")
-    model_sample_cols = st.columns(3)
+    # Same 5 sample questions as Tab 1
+    st.markdown("##### Try a sample question:")
+    model_sample_cols = st.columns(5)
     model_samples = [
         "What was Airbnb's total revenue in fiscal year 2019?",
-        "What was DoorDash's net loss in 2019?",
-        "How many vehicles had Rivian produced by IPO?"
+        "How many Dashers were on DoorDash's platform at IPO?",
+        "What are Snowflake's main risk factors?",
+        "What was Rivian's net loss in 2020?",
+        "Who were Palantir's largest customers?",
     ]
-    model_sample_labels = ["Airbnb Revenue", "DoorDash Loss", "Rivian Vehicles"]
+    model_sample_labels = ["Airbnb Revenue", "DoorDash Dashers", "Snowflake Risks", "Rivian Loss", "Palantir Customers"]
 
     if "model_question" not in st.session_state:
         st.session_state.model_question = ""
@@ -423,10 +427,11 @@ with tab2:
         with model_sample_cols[i]:
             if st.button(label, key=f"model_sample_{i}", help=sample_q, use_container_width=True):
                 st.session_state.model_question = sample_q
+                st.rerun()
 
     model_default_q = st.session_state.model_question if st.session_state.model_question else ""
     query2 = st.text_input(
-        "Enter question (will query GPT, Gemini, and Llama in parallel):",
+        "Or type your own question (will query GPT, Gemini, and Llama in parallel):",
         value=model_default_q,
         placeholder="What was Airbnb's total revenue in fiscal 2019?",
         key="tab2_query"
@@ -520,31 +525,66 @@ Be precise and concise. Include the dollar amount if applicable."""
 
         # Summary
         st.markdown("---")
-        st.markdown("### 📊 External Validity Analysis")
+        st.markdown("### 📊 What Does This Tell Us?")
+
+        # Build intuitive summary
+        successful_models = [r for r in results if r['success']]
+        extracted_values = [(r['model'], extract_number(r['answer'])) for r in successful_models]
+        extracted_values = [(m, v) for m, v in extracted_values if v is not None]
 
         if ensemble['success'] and ensemble.get('spread_pct') is not None:
             spread = ensemble['spread_pct']
+            median_val = ensemble.get('median', 0)
 
-            if spread > 15:
-                st.error(f"""
-                **⚠️ High Model Disagreement ({spread:.1f}% spread)**
+            # Create a plain-English summary
+            st.markdown("#### Quick Summary")
 
-                Different LLMs give substantially different answers to the same factual question.
-                This supports the critique that Wang's findings may not generalize across model families.
+            col_summary1, col_summary2 = st.columns(2)
+
+            with col_summary1:
+                if len(extracted_values) >= 2:
+                    values_str = ", ".join([f"**{m}**: ${v:.2f}B" for m, v in extracted_values])
+                    st.markdown(f"**Models said:** {values_str}")
+                    st.markdown(f"**Median answer:** ${median_val:.2f}B")
+
+            with col_summary2:
+                if spread > 15:
+                    st.markdown(f"""
+                    🚨 **PROBLEM: Models disagree by {spread:.0f}%**
+
+                    This is a big spread! Different LLMs give very different answers to the same factual question.
+                    """)
+                elif spread > 5:
+                    st.markdown(f"""
+                    ⚠️ **CAUTION: Models differ by {spread:.0f}%**
+
+                    Noticeable variation between models. The "right" answer depends on which LLM you ask.
+                    """)
+                else:
+                    st.markdown(f"""
+                    ✅ **GOOD: Models agree (within {spread:.0f}%)**
+
+                    All models converge on similar answers. This fact is well-established across training data.
+                    """)
+
+            st.markdown("---")
+            st.markdown("#### Implications for Wang's Paper")
+
+            if spread > 10:
+                st.error("""
+                **External Validity Concern:** Wang's findings are based on OpenAI models only.
+                This high disagreement suggests hallucination rates may be **model-specific**,
+                not a universal LLM behavior. Different models = different error rates.
                 """)
             elif spread > 5:
-                st.warning(f"""
-                **⚡ Moderate Model Disagreement ({spread:.1f}% spread)**
-
-                Models show some variation in their answers. This suggests model-specific training
-                data and architectures affect factual recall.
+                st.warning("""
+                **Moderate Concern:** Some variation between model families. Wang's exact percentages
+                (48% deviation, 36% fabrication) may not replicate across Gemini or Llama.
                 """)
             else:
-                st.success(f"""
-                **✅ Models Agree ({spread:.1f}% spread)**
-
-                All models converge on similar answers, suggesting this is well-established information
-                in training data across model families.
+                st.success("""
+                **Good News:** For this question, models agree. However, agreement on easy facts
+                doesn't mean agreement on harder accounting questions. Test more examples!
                 """)
 
         with st.expander("ℹ️ About this comparison"):
@@ -554,9 +594,12 @@ Be precise and concise. Include the dollar amount if applicable."""
             - **Gemini 2.0 Flash** (Google) - Different architecture
             - **Llama 3.3 70B** (Meta via Groq) - Open source
 
-            **Why this matters:**
-            Wang's paper tests only OpenAI models. If different model families give different answers,
-            the hallucination rates may be model-specific rather than universal LLM behavior.
+            **The question:** Does model choice affect hallucination rates?
+
+            **Why it matters:** If GPT, Gemini, and Llama give different answers, then:
+            1. Hallucination rates are model-dependent
+            2. Wang's findings may not generalize
+            3. Researchers should test across model families
             """)
 
     else:
@@ -578,4 +621,4 @@ Be precise and concise. Include the dollar amount if applicable."""
 # Footer
 # ============================================================================
 st.markdown("---")
-st.caption("AAA 2024 Conference Discussion  •  Wang (UT Austin) - \"F(r)iction in Machines\"  •  Multi-model comparison")
+st.caption("AAA 2026 Conference Discussion  •  Wang (UT Austin) - \"F(r)iction in Machines\"  •  Multi-model comparison")
