@@ -10,6 +10,10 @@ import time
 import concurrent.futures
 from typing import Optional, List, Dict
 import logging
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
