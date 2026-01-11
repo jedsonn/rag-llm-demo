@@ -56,14 +56,14 @@ def query_gpt(question: str, timeout: float = 15.0) -> Dict:
         if not api_key:
             return {
                 "answer": "No OpenAI API key configured",
-                "model": "GPT-4o-mini",
+                "model": "GPT-4.1-mini",
                 "success": False,
                 "elapsed_time": 0
             }
 
         client = OpenAI(api_key=api_key)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             messages=[{"role": "user", "content": question}],
             max_tokens=1024,
             temperature=0
@@ -72,7 +72,7 @@ def query_gpt(question: str, timeout: float = 15.0) -> Dict:
         elapsed = time.time() - start_time
         return {
             "answer": response.choices[0].message.content,
-            "model": "GPT-4o-mini",
+            "model": "GPT-4.1-mini",
             "success": True,
             "elapsed_time": elapsed
         }
@@ -81,7 +81,7 @@ def query_gpt(question: str, timeout: float = 15.0) -> Dict:
         logger.error(f"GPT error: {e}")
         return {
             "answer": f"Error: {str(e)[:100]}",
-            "model": "GPT-4o-mini",
+            "model": "GPT-4.1-mini",
             "success": False,
             "elapsed_time": elapsed
         }
@@ -97,20 +97,20 @@ def query_gemini(question: str, timeout: float = 15.0) -> Dict:
         if not api_key:
             return {
                 "answer": "No Gemini API key configured",
-                "model": "Gemini-1.5-Flash",
+                "model": "Gemini-2.0-Flash",
                 "success": False,
                 "elapsed_time": 0
             }
 
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
         response = model.generate_content(question)
 
         elapsed = time.time() - start_time
         return {
             "answer": response.text,
-            "model": "Gemini-1.5-Flash",
+            "model": "Gemini-2.0-Flash",
             "success": True,
             "elapsed_time": elapsed
         }
@@ -119,7 +119,7 @@ def query_gemini(question: str, timeout: float = 15.0) -> Dict:
         logger.error(f"Gemini error: {e}")
         return {
             "answer": f"Error: {str(e)[:100]}",
-            "model": "Gemini-1.5-Flash",
+            "model": "Gemini-2.0-Flash",
             "success": False,
             "elapsed_time": elapsed
         }
@@ -198,7 +198,7 @@ def query_all_models(question: str) -> List[Dict]:
                 })
 
     # Sort by model name for consistent display
-    model_order = ["GPT-4o-mini", "Gemini-1.5-Flash", "Llama-3.3-70B"]
+    model_order = ["GPT-4.1-mini", "Gemini-2.0-Flash", "Llama-3.3-70B"]
     results.sort(key=lambda x: model_order.index(x["model"]) if x["model"] in model_order else 99)
 
     return results
