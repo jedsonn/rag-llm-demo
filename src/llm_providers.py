@@ -97,7 +97,7 @@ def query_gemini(question: str, timeout: float = 15.0) -> Dict:
             }
 
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
+        model = genai.GenerativeModel("gemini-2.5-flash")
 
         response = model.generate_content(question)
 
