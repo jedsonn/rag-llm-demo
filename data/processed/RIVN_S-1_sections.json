@@ -1,0 +1,44 @@
+{
+  "BUSINESS": {
+    "start": 16887,
+    "end": 17406,
+    "length": 519,
+    "header": "BUSINESS"
+  },
+  "RISK FACTORS": {
+    "start": 7079,
+    "end": 16542,
+    "length": 9463,
+    "header": "RISK FACTORS"
+  },
+  "MD&A": {
+    "start": 16796,
+    "end": 16887,
+    "length": 91,
+    "header": "MANAGEMENT\u0092S DISCUSSION AND ANALYSIS"
+  },
+  "FINANCIAL STATEMENTS": {
+    "start": 17406,
+    "end": 60669,
+    "length": 43263,
+    "header": "FINANCIAL STATEMENTS"
+  },
+  "USE OF PROCEEDS": {
+    "start": 16668,
+    "end": 16796,
+    "length": 128,
+    "header": "USE OF PROCEEDS"
+  },
+  "PROSPECTUS SUMMARY": {
+    "start": 16542,
+    "end": 16668,
+    "length": 126,
+    "header": "PROSPECTUS SUMMARY"
+  },
+  "THE OFFERING": {
+    "start": 60669,
+    "end": 994714,
+    "length": 934045,
+    "header": "THE OFFERING"
+  }
+}
