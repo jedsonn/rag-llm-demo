@@ -154,87 +154,141 @@ def detect_hallucination(raw_answer, grounded_answer, chunks_text):
     )
 
 
-# Custom CSS for presentation mode
+# Custom CSS for presentation mode - CLEAN, HIGH CONTRAST
 st.markdown("""
 <style>
+    /* Main header */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
+        font-size: 2.2rem;
+        font-weight: 700;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
+        color: #1a1a1a;
     }
-    .column-header {
-        font-size: 1.5rem;
-        font-weight: bold;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
+    .subtitle {
         text-align: center;
-        margin-bottom: 1rem;
+        color: #555;
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Column headers - clear color coding */
+    .column-header {
+        font-size: 1.3rem;
+        font-weight: 700;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 0.75rem;
     }
     .raw-llm-header {
-        background-color: #ffebee;
-        color: #c62828;
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 2px solid #fca5a5;
     }
     .rag-only-header {
-        background-color: #e3f2fd;
-        color: #1565c0;
+        background-color: #dbeafe;
+        color: #1e40af;
+        border: 2px solid #93c5fd;
     }
     .rag-llm-header {
-        background-color: #e8f5e9;
-        color: #2e7d32;
+        background-color: #d1fae5;
+        color: #065f46;
+        border: 2px solid #6ee7b7;
     }
+
+    /* Hallucination boxes - HIGH CONTRAST TEXT */
     .hallucination-box {
-        padding: 1rem;
-        border-radius: 0.5rem;
+        padding: 1.25rem;
+        border-radius: 10px;
         margin: 1rem 0;
     }
+    .hallucination-box h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.2rem;
+    }
+    .hallucination-box p {
+        margin: 0.5rem 0;
+        line-height: 1.5;
+    }
     .fabrication {
-        background-color: #ffebee;
-        border: 2px solid #ef5350;
+        background-color: #fef2f2;
+        border: 3px solid #dc2626;
+    }
+    .fabrication h4, .fabrication p, .fabrication strong {
+        color: #7f1d1d !important;
     }
     .deviation {
-        background-color: #fff3e0;
-        border: 2px solid #ff9800;
+        background-color: #fffbeb;
+        border: 3px solid #f59e0b;
+    }
+    .deviation h4, .deviation p, .deviation strong {
+        color: #78350f !important;
     }
     .consistent {
-        background-color: #e8f5e9;
-        border: 2px solid #4caf50;
+        background-color: #f0fdf4;
+        border: 3px solid #22c55e;
     }
-    .timing {
-        font-size: 0.9rem;
-        color: #666;
-        margin-top: 0.5rem;
+    .consistent h4, .consistent p, .consistent strong {
+        color: #14532d !important;
     }
+
+    /* Badges */
     .warning-badge {
-        background-color: #fff3e0;
-        color: #e65100;
-        padding: 0.3rem 0.6rem;
-        border-radius: 0.3rem;
+        background-color: #fef3c7;
+        color: #92400e;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
         font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
     }
     .success-badge {
-        background-color: #e8f5e9;
-        color: #2e7d32;
-        padding: 0.3rem 0.6rem;
-        border-radius: 0.3rem;
+        background-color: #d1fae5;
+        color: #065f46;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
         font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
     }
+    .info-badge {
+        background-color: #dbeafe;
+        color: #1e40af;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    /* Timing info */
+    .timing {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+    }
+
+    /* Input styling */
     .stTextInput input {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
+    }
+
+    /* Make expanders cleaner */
+    .streamlit-expanderHeader {
+        font-size: 0.95rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # Header
-st.markdown('<div class="main-header">📊 RAG vs Raw LLM: Accounting Information Retrieval</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">RAG vs Raw LLM: Accounting Information Retrieval</div>', unsafe_allow_html=True)
 st.markdown("""
-<p style="text-align: center; color: #666; font-size: 1.1rem;">
-    Comparing parametric memory (Raw LLM) vs retrieval-augmented generation (RAG) for factual questions about SEC filings.<br>
-    <em>Hallucination detection inspired by Wang (UT Austin) - "F(r)iction in Machines"</em>
+<p class="subtitle">
+    Comparing parametric memory (Raw LLM) vs retrieval-augmented generation (RAG) for SEC filing questions<br>
+    <em>Hallucination detection based on Wang (UT Austin) - "F(r)iction in Machines"</em>
 </p>
 """, unsafe_allow_html=True)
-
-st.markdown("---")
 
 # Initialize pipeline (cached)
 @st.cache_resource
@@ -255,28 +309,28 @@ SAMPLE_QUESTIONS = [
 if "selected_question" not in st.session_state:
     st.session_state.selected_question = ""
 
-# Sample question buttons (before the text input)
-st.markdown("**Quick questions:**")
-sample_cols = st.columns(len(SAMPLE_QUESTIONS))
+# Sample question buttons - cleaner horizontal layout
+st.markdown("##### Try a sample question:")
+sample_cols = st.columns(5)
 for i, sample_q in enumerate(SAMPLE_QUESTIONS):
     with sample_cols[i]:
-        if st.button(f"Q{i+1}", key=f"sample_{i}", help=sample_q):
+        # Shorten display text for button
+        short_labels = ["Airbnb Revenue", "DoorDash Dashers", "Snowflake Risks", "Rivian Loss", "Palantir Customers"]
+        if st.button(short_labels[i], key=f"sample_{i}", help=sample_q, use_container_width=True):
             st.session_state.selected_question = sample_q
 
 # Question input - use selected question as default value
 default_q = st.session_state.selected_question if st.session_state.selected_question else ""
 
-col_input, col_button = st.columns([5, 1])
+st.markdown("")  # Small spacing
+question = st.text_input(
+    "Or type your own question about Airbnb, DoorDash, Snowflake, Rivian, or Palantir:",
+    value=default_q,
+    placeholder="e.g., What was Airbnb's revenue in 2019?",
+)
 
-with col_input:
-    question = st.text_input(
-        "Enter your question about these companies (Airbnb, DoorDash, Snowflake, Rivian, Palantir):",
-        value=default_q,
-        placeholder="e.g., What was Airbnb's revenue in 2019?",
-    )
-
+col_spacer, col_button, col_spacer2 = st.columns([3, 1, 3])
 with col_button:
-    st.write("")  # Spacing
     compare_button = st.button("🔍 Compare", type="primary", use_container_width=True)
 
 st.markdown("---")
@@ -322,7 +376,7 @@ if compare_button and question:
         st.markdown("*Retrieved chunks - read the source*")
 
         if result.rag_only:
-            st.markdown(f'<span class="info" style="color:#1565c0;">📚 {len(result.rag_only.chunks)} chunks retrieved</span>', unsafe_allow_html=True)
+            st.markdown(f'<span class="info-badge">📚 {len(result.rag_only.chunks)} chunks retrieved</span>', unsafe_allow_html=True)
             st.markdown(f'<div class="timing">⏱️ {result.rag_only.elapsed_time:.2f}s</div>', unsafe_allow_html=True)
             st.markdown("---")
 
@@ -424,37 +478,45 @@ if compare_button and question:
         )
 
 else:
-    # Instructions when no query
-    st.info("👆 Enter a question above and click 'Compare' to see the difference between Raw LLM and RAG approaches.")
+    # Instructions when no query - cleaner layout
+    st.markdown("")
 
-    st.markdown("""
-    ### How this demo works:
+    # Two columns for cleaner layout
+    left_col, right_col = st.columns(2)
 
-    | Column | Method | What it shows |
-    |--------|--------|---------------|
-    | **Raw LLM** | Direct query to GPT-4.1-mini | Answer from model's training data - may be wrong |
-    | **RAG Only** | Vector search on SEC filings | Raw document excerpts - you read them |
-    | **RAG + LLM** | Search + GPT synthesis | Grounded answer citing actual filings |
+    with left_col:
+        st.markdown("#### How this demo works")
+        st.markdown("""
+        | Column | What it shows |
+        |--------|---------------|
+        | **🧠 Raw LLM** | Direct query - uses model's training data (may hallucinate) |
+        | **📄 RAG Only** | Retrieved document chunks - you read the source |
+        | **✨ RAG + LLM** | Grounded answer synthesized from actual SEC filings |
+        """)
 
-    ### Hallucination Types (Wang's Framework):
-    - 🚨 **Fabrication**: LLM makes up data that doesn't exist
-    - ⚠️ **Deviation**: LLM gives wrong values for real data
-    - ✅ **Consistent**: LLM answer matches grounded sources
+        st.markdown("#### Hallucination Types")
+        st.markdown("""
+        - 🚨 **Fabrication** — LLM invents data that doesn't exist in sources
+        - ⚠️ **Deviation** — LLM gives wrong values for real data
+        - ✅ **Consistent** — LLM answer matches grounded sources
+        """)
 
-    ### Data source:
-    S-1 filings (pre-IPO registration statements) from SEC EDGAR for:
-    - **Airbnb** (IPO 2020)
-    - **DoorDash** (IPO 2020)
-    - **Snowflake** (IPO 2020)
-    - **Rivian** (IPO 2021)
-    - **Palantir** (IPO 2020)
-    """)
+    with right_col:
+        st.markdown("#### Data Sources")
+        st.markdown("""
+        S-1 filings (pre-IPO registration statements) from SEC EDGAR:
+
+        | Company | IPO Year |
+        |---------|----------|
+        | Airbnb | 2020 |
+        | DoorDash | 2020 |
+        | Snowflake | 2020 |
+        | Rivian | 2021 |
+        | Palantir | 2020 |
+        """)
+
+        st.info("👆 **Click a sample question above** or type your own, then click Compare.")
 
 # Footer
 st.markdown("---")
-st.markdown("""
-<p style="text-align: center; color: #999; font-size: 0.9rem;">
-    Demo for AAA 2024 Conference Discussion | Paper: Wang (UT Austin) - "F(r)iction in Machines: Accounting Hallucinations of LLMs"<br>
-    LLM: OpenAI GPT-4.1-mini | Embeddings: sentence-transformers/all-MiniLM-L6-v2
-</p>
-""", unsafe_allow_html=True)
+st.caption("AAA 2024 Conference Discussion  •  Paper: Wang (UT Austin) - \"F(r)iction in Machines\"  •  GPT-4.1-mini + sentence-transformers")
