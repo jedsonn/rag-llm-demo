@@ -597,7 +597,7 @@ Be precise and concise. Include the dollar amount if applicable."""
             st.markdown("""
             **Models tested:**
             - **GPT-4.1-mini** (OpenAI) - Same family as Wang's paper
-            - **Gemini 2.0 Flash** (Google) - Different architecture
+            - **Gemini 2.5 Flash** (Google) - Different architecture
             - **Llama 3.3 70B** (Meta via Groq) - Open source
 
             **The question:** Does model choice affect hallucination rates?
