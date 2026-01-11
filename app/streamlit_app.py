@@ -61,97 +61,165 @@ def extract_numbers(text):
 
     return numbers
 
-def detect_hallucination(raw_answer, grounded_answer, chunks_text):
+def score_raw_llm(raw_answer, grounded_answer, chunks_text):
     """
-    Detect hallucination type based on Wang's paper framework.
+    Score Raw LLM response for hallucination risk.
 
     Returns:
-        tuple: (hallucination_type, confidence, explanation)
-        - hallucination_type: "none", "deviation", "fabrication", "uncertain"
-        - confidence: float 0-1
-        - explanation: str
+        dict with: score (0-100, higher = more risk), label, color, explanation
     """
-    if not raw_answer or not grounded_answer:
-        return ("uncertain", 0.5, "Could not compare responses")
+    if not raw_answer:
+        return {"score": None, "label": "N/A", "color": "gray", "explanation": "No response"}
 
     raw_lower = raw_answer.lower()
-    grounded_lower = grounded_answer.lower()
+    grounded_lower = grounded_answer.lower() if grounded_answer else ""
 
-    # Check if grounded answer says info not available
-    no_info_phrases = [
-        "do not contain",
-        "not contain information",
-        "cannot find",
-        "no information",
-        "not mentioned",
-        "not specified"
-    ]
-
+    # Check if grounded says no info available
+    no_info_phrases = ["do not contain", "not contain information", "cannot find",
+                       "no information", "not mentioned", "not specified", "not available"]
     grounded_says_no_info = any(phrase in grounded_lower for phrase in no_info_phrases)
 
-    # Check if raw LLM expresses uncertainty
-    uncertainty_phrases = [
-        "i don't have",
-        "i'm not certain",
-        "i cannot confirm",
-        "uncertain",
-        "not sure",
-        "may vary",
-        "approximately",
-        "around",
-        "roughly"
-    ]
+    # Check if raw expresses uncertainty
+    uncertainty_phrases = ["i don't have", "i'm not certain", "i cannot confirm",
+                          "uncertain", "not sure", "don't know", "no information"]
+    raw_uncertain = any(phrase in raw_lower for phrase in uncertainty_phrases)
 
-    raw_expresses_uncertainty = any(phrase in raw_lower for phrase in uncertainty_phrases)
-
-    # Extract numbers from both
+    # Extract numbers
     raw_numbers = extract_numbers(raw_answer)
-    grounded_numbers = extract_numbers(grounded_answer)
+    grounded_numbers = extract_numbers(grounded_answer) if grounded_answer else []
 
-    # Case 1: Grounded says no info, but Raw gives specific answer = FABRICATION
-    if grounded_says_no_info and raw_numbers and not raw_expresses_uncertainty:
-        return (
-            "fabrication",
-            0.9,
-            "⚠️ **FABRICATION**: Raw LLM provided specific information that doesn't exist in source documents."
-        )
+    # FABRICATION: Raw gives specific data when grounded says no info
+    if grounded_says_no_info and raw_numbers and not raw_uncertain:
+        return {
+            "score": 95,
+            "label": "FABRICATION",
+            "color": "#dc2626",
+            "explanation": "Provided specific data not found in source documents"
+        }
 
-    # Case 2: Both have numbers but they differ significantly = DEVIATION
+    # DEVIATION: Numbers differ significantly
     if raw_numbers and grounded_numbers:
-        # Compare the most prominent numbers
-        raw_main = max(raw_numbers) if raw_numbers else 0
-        grounded_main = max(grounded_numbers) if grounded_numbers else 0
-
+        raw_main = max(raw_numbers)
+        grounded_main = max(grounded_numbers)
         if grounded_main > 0:
-            deviation = abs(raw_main - grounded_main) / grounded_main
+            deviation_pct = abs(raw_main - grounded_main) / grounded_main * 100
+            if deviation_pct > 20:
+                return {
+                    "score": min(90, 50 + deviation_pct),
+                    "label": f"DEVIATION ({deviation_pct:.0f}%)",
+                    "color": "#f59e0b",
+                    "explanation": f"Key number differs by {deviation_pct:.0f}% from grounded source"
+                }
+            elif deviation_pct > 5:
+                return {
+                    "score": 30 + deviation_pct,
+                    "label": f"Minor ({deviation_pct:.0f}%)",
+                    "color": "#eab308",
+                    "explanation": f"Minor numerical difference of {deviation_pct:.0f}%"
+                }
 
-            if deviation > 0.1:  # More than 10% off
-                return (
-                    "deviation",
-                    min(0.9, deviation),
-                    f"⚠️ **DEVIATION**: Raw LLM number differs by {deviation*100:.1f}% from grounded source."
-                )
-            elif deviation > 0.01:  # 1-10% off
-                return (
-                    "minor_deviation",
-                    deviation,
-                    f"⚡ **Minor Deviation**: Numbers differ by {deviation*100:.1f}% (rounding difference)."
-                )
+    # HONEST: Raw admits uncertainty
+    if raw_uncertain:
+        return {
+            "score": 15,
+            "label": "HONEST",
+            "color": "#22c55e",
+            "explanation": "Appropriately expressed uncertainty"
+        }
 
-    # Case 3: Raw expresses uncertainty = HONEST
-    if raw_expresses_uncertainty:
-        return (
-            "honest_uncertainty",
-            0.3,
-            "✅ **Honest**: Raw LLM appropriately expressed uncertainty."
-        )
+    # CONSISTENT: Answers align
+    return {
+        "score": 20,
+        "label": "CONSISTENT",
+        "color": "#22c55e",
+        "explanation": "Response aligns with grounded answer"
+    }
 
-    # Case 4: Answers seem consistent
-    return (
-        "consistent",
-        0.2,
-        "✅ **Consistent**: Responses appear aligned."
-    )
+
+def score_rag_llm(grounded_answer, chunks_text):
+    """
+    Score RAG+LLM response for grounding confidence.
+
+    Returns:
+        dict with: score (0-100, higher = better grounding), label, color, explanation
+    """
+    if not grounded_answer:
+        return {"score": None, "label": "N/A", "color": "gray", "explanation": "No response"}
+
+    grounded_lower = grounded_answer.lower()
+    chunks_lower = chunks_text.lower() if chunks_text else ""
+
+    # Check if answer admits no info found
+    no_info_phrases = ["do not contain", "not contain information", "cannot find",
+                       "no information", "not mentioned", "not specified"]
+    says_no_info = any(phrase in grounded_lower for phrase in no_info_phrases)
+
+    if says_no_info:
+        return {
+            "score": 85,
+            "label": "HONEST",
+            "color": "#22c55e",
+            "explanation": "Correctly states info not in documents"
+        }
+
+    # Check for numbers and if they appear in chunks
+    grounded_numbers = extract_numbers(grounded_answer)
+    chunk_numbers = extract_numbers(chunks_text) if chunks_text else []
+
+    if grounded_numbers and chunk_numbers:
+        # Check if main numbers match chunks
+        grounded_main = max(grounded_numbers)
+        matches = any(abs(grounded_main - cn) / max(grounded_main, 1) < 0.05 for cn in chunk_numbers)
+        if matches:
+            return {
+                "score": 95,
+                "label": "GROUNDED",
+                "color": "#22c55e",
+                "explanation": "Numbers match source documents"
+            }
+
+    # Default: reasonable grounding
+    return {
+        "score": 80,
+        "label": "GROUNDED",
+        "color": "#22c55e",
+        "explanation": "Response synthesized from retrieved chunks"
+    }
+
+
+def score_rag_only(chunks):
+    """
+    Score RAG retrieval quality.
+
+    Returns:
+        dict with: score (0-100), label, color, explanation
+    """
+    if not chunks:
+        return {"score": 0, "label": "NO DATA", "color": "#dc2626", "explanation": "No chunks retrieved"}
+
+    avg_score = sum(c.score for c in chunks) / len(chunks)
+
+    if avg_score > 0.5:
+        return {
+            "score": min(95, int(avg_score * 100)),
+            "label": "HIGH",
+            "color": "#22c55e",
+            "explanation": f"Strong semantic match (avg: {avg_score:.2f})"
+        }
+    elif avg_score > 0.3:
+        return {
+            "score": int(avg_score * 100),
+            "label": "MODERATE",
+            "color": "#eab308",
+            "explanation": f"Moderate match (avg: {avg_score:.2f})"
+        }
+    else:
+        return {
+            "score": int(avg_score * 100),
+            "label": "LOW",
+            "color": "#f59e0b",
+            "explanation": f"Weak semantic match (avg: {avg_score:.2f})"
+        }
 
 
 # Custom CSS for presentation mode - CLEAN, HIGH CONTRAST
@@ -278,6 +346,28 @@ st.markdown("""
     .streamlit-expanderHeader {
         font-size: 0.95rem;
     }
+
+    /* Score displays */
+    .score-box {
+        padding: 0.75rem;
+        border-radius: 8px;
+        text-align: center;
+        margin: 0.5rem 0;
+    }
+    .score-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .score-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .score-explanation {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        opacity: 0.9;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -341,13 +431,19 @@ if compare_button and question:
         pipeline = get_pipeline()
         result = pipeline.compare_all(question)
 
-    # Detect hallucination
+    # Get chunks text for scoring
     chunks_text = ""
     if result.rag_only:
         chunks_text = " ".join([c.text for c in result.rag_only.chunks])
 
-    hall_type, hall_confidence, hall_explanation = detect_hallucination(
+    # Calculate individual scores
+    raw_score = score_raw_llm(
         result.raw_llm.answer if result.raw_llm else "",
+        result.rag_plus_llm.answer if result.rag_plus_llm else "",
+        chunks_text
+    )
+    rag_only_score = score_rag_only(result.rag_only.chunks if result.rag_only else [])
+    rag_llm_score = score_rag_llm(
         result.rag_plus_llm.answer if result.rag_plus_llm else "",
         chunks_text
     )
@@ -358,28 +454,45 @@ if compare_button and question:
     # Column 1: Raw LLM
     with col1:
         st.markdown('<div class="column-header raw-llm-header">🧠 Raw LLM</div>', unsafe_allow_html=True)
-        st.markdown("*Direct query - no documents*")
+
+        # Score display for Raw LLM (hallucination risk - red is bad)
+        if raw_score["score"] is not None:
+            risk_color = raw_score["color"]
+            st.markdown(f'''
+            <div class="score-box" style="background-color: {risk_color}15; border: 2px solid {risk_color};">
+                <div class="score-label" style="color: {risk_color};">Hallucination Risk</div>
+                <div class="score-value" style="color: {risk_color};">{raw_score["label"]}</div>
+                <div class="score-explanation" style="color: #333;">{raw_score["explanation"]}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        st.markdown(f'<div class="timing">⏱️ {result.raw_llm.elapsed_time:.2f}s</div>' if result.raw_llm else '', unsafe_allow_html=True)
+        st.markdown("---")
 
         if result.raw_llm:
-            st.markdown(f'<span class="warning-badge">⚠️ May contain inaccuracies</span>', unsafe_allow_html=True)
-            st.markdown(f'<div class="timing">⏱️ {result.raw_llm.elapsed_time:.2f}s</div>', unsafe_allow_html=True)
-            st.markdown("---")
             st.markdown(result.raw_llm.answer)
         else:
             st.error("Failed - Check API key")
-            if result.errors:
-                st.caption(str([e for e in result.errors if "Raw LLM" in e]))
 
     # Column 2: RAG Only
     with col2:
         st.markdown('<div class="column-header rag-only-header">📄 RAG Only</div>', unsafe_allow_html=True)
-        st.markdown("*Retrieved chunks - read the source*")
+
+        # Score display for RAG retrieval quality
+        if rag_only_score["score"] is not None:
+            ret_color = rag_only_score["color"]
+            st.markdown(f'''
+            <div class="score-box" style="background-color: {ret_color}15; border: 2px solid {ret_color};">
+                <div class="score-label" style="color: {ret_color};">Retrieval Quality</div>
+                <div class="score-value" style="color: {ret_color};">{rag_only_score["label"]}</div>
+                <div class="score-explanation" style="color: #333;">{rag_only_score["explanation"]}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        st.markdown(f'<div class="timing">⏱️ {result.rag_only.elapsed_time:.2f}s</div>' if result.rag_only else '', unsafe_allow_html=True)
+        st.markdown("---")
 
         if result.rag_only:
-            st.markdown(f'<span class="info-badge">📚 {len(result.rag_only.chunks)} chunks retrieved</span>', unsafe_allow_html=True)
-            st.markdown(f'<div class="timing">⏱️ {result.rag_only.elapsed_time:.2f}s</div>', unsafe_allow_html=True)
-            st.markdown("---")
-
             for i, chunk in enumerate(result.rag_only.chunks):
                 meta = chunk.metadata
                 with st.expander(f"**Chunk {i+1}** | {meta['company']} | Score: {chunk.score:.3f}", expanded=(i==0)):
@@ -391,12 +504,22 @@ if compare_button and question:
     # Column 3: RAG + LLM
     with col3:
         st.markdown('<div class="column-header rag-llm-header">✨ RAG + LLM</div>', unsafe_allow_html=True)
-        st.markdown("*Grounded in SEC filings*")
+
+        # Score display for RAG+LLM (grounding confidence - green is good)
+        if rag_llm_score["score"] is not None:
+            ground_color = rag_llm_score["color"]
+            st.markdown(f'''
+            <div class="score-box" style="background-color: {ground_color}15; border: 2px solid {ground_color};">
+                <div class="score-label" style="color: {ground_color};">Grounding Confidence</div>
+                <div class="score-value" style="color: {ground_color};">{rag_llm_score["label"]}</div>
+                <div class="score-explanation" style="color: #333;">{rag_llm_score["explanation"]}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        st.markdown(f'<div class="timing">⏱️ {result.rag_plus_llm.elapsed_time:.2f}s</div>' if result.rag_plus_llm else '', unsafe_allow_html=True)
+        st.markdown("---")
 
         if result.rag_plus_llm:
-            st.markdown(f'<span class="success-badge">✅ Grounded in documents</span>', unsafe_allow_html=True)
-            st.markdown(f'<div class="timing">⏱️ {result.rag_plus_llm.elapsed_time:.2f}s (retrieval: {result.rag_plus_llm.retrieval_time:.2f}s, LLM: {result.rag_plus_llm.llm_time:.2f}s)</div>', unsafe_allow_html=True)
-            st.markdown("---")
             st.markdown(result.rag_plus_llm.answer)
 
             with st.expander("📎 Source chunks used"):
@@ -406,76 +529,50 @@ if compare_button and question:
                     st.caption(chunk.text[:200] + "...")
         else:
             st.error("Failed - Check API key")
-            if result.errors:
-                st.caption(str([e for e in result.errors if "RAG + LLM" in e]))
 
     # ========================================================================
-    # Hallucination Analysis Section (Wang Paper Style)
+    # Summary Section
     # ========================================================================
     st.markdown("---")
-    st.markdown("### 🔍 Hallucination Analysis (Wang Paper Framework)")
+    st.markdown("### 📊 Comparison Summary")
 
-    # Determine color based on type
-    if hall_type in ["fabrication"]:
-        box_class = "fabrication"
-        icon = "🚨"
-    elif hall_type in ["deviation", "minor_deviation"]:
-        box_class = "deviation"
-        icon = "⚠️"
-    else:
-        box_class = "consistent"
-        icon = "✅"
-
-    st.markdown(f"""
-    <div class="hallucination-box {box_class}">
-        <h4>{icon} {hall_type.upper().replace('_', ' ')}</h4>
-        <p>{hall_explanation}</p>
-        <p><strong>Confidence:</strong> {hall_confidence*100:.0f}%</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Explanation of types
-    with st.expander("ℹ️ What do these terms mean? (from Wang's paper)"):
-        st.markdown("""
-        **Based on Wang (UT Austin) - "F(r)iction in Machines: Accounting Hallucinations of LLMs":**
-
-        | Type | Definition | Example |
-        |------|------------|---------|
-        | **Fabrication** | LLM invents information that doesn't exist | Giving revenue for a pre-IPO company when that data wasn't public |
-        | **Deviation** | LLM gives wrong values for real data | Saying revenue was $4.5B when it was actually $4.81B |
-        | **Honest Uncertainty** | LLM appropriately admits it doesn't know | "I'm not certain about the exact figure..." |
-        | **Consistent** | Raw LLM matches grounded answer | Both give the same factual answer |
-
-        *Key finding from Wang's paper: Even the best prompting strategies result in 48% average deviation and 36% fabrication rate for pre-IPO data.*
-        """)
-
-    # Summary metrics
-    st.markdown("### 📊 Summary")
-
-    summary_cols = st.columns(4)
+    summary_cols = st.columns(3)
     with summary_cols[0]:
         st.metric(
-            "Raw LLM",
-            f"{result.raw_llm.elapsed_time:.2f}s" if result.raw_llm else "Failed",
+            "🧠 Raw LLM",
+            raw_score["label"],
+            f"⏱️ {result.raw_llm.elapsed_time:.2f}s" if result.raw_llm else "Failed",
+            delta_color="inverse" if raw_score["score"] and raw_score["score"] > 50 else "off"
         )
     with summary_cols[1]:
         st.metric(
-            "RAG Only",
-            f"{result.rag_only.elapsed_time:.2f}s" if result.rag_only else "Failed",
-            f"{len(result.rag_only.chunks)} chunks" if result.rag_only else None
+            "📄 RAG Retrieval",
+            rag_only_score["label"],
+            f"{len(result.rag_only.chunks)} chunks" if result.rag_only else None,
+            delta_color="normal" if rag_only_score["score"] and rag_only_score["score"] > 50 else "off"
         )
     with summary_cols[2]:
         st.metric(
-            "RAG + LLM",
-            f"{result.rag_plus_llm.elapsed_time:.2f}s" if result.rag_plus_llm else "Failed",
+            "✨ RAG + LLM",
+            rag_llm_score["label"],
+            f"⏱️ {result.rag_plus_llm.elapsed_time:.2f}s" if result.rag_plus_llm else "Failed",
+            delta_color="normal"
         )
-    with summary_cols[3]:
-        st.metric(
-            "Hallucination Risk",
-            hall_type.replace('_', ' ').title(),
-            f"{hall_confidence*100:.0f}%" if hall_type in ["fabrication", "deviation"] else "Low",
-            delta_color="inverse" if hall_type in ["fabrication", "deviation"] else "off"
-        )
+
+    # Explanation of scoring
+    with st.expander("ℹ️ How are these scores calculated? (Wang's Framework)"):
+        st.markdown("""
+        **Scoring based on Wang (UT Austin) - "F(r)iction in Machines":**
+
+        | Score | Meaning | How it's detected |
+        |-------|---------|-------------------|
+        | **FABRICATION** | LLM invents data that doesn't exist | Raw LLM gives specific numbers when grounded answer says "no information" |
+        | **DEVIATION** | LLM gives wrong values | Numerical difference >5% between Raw LLM and grounded answer |
+        | **CONSISTENT** | Answers align | Numbers match within 5% tolerance |
+        | **GROUNDED** | Answer cites sources | RAG+LLM response references retrieved chunks |
+
+        *Wang's finding: 48% average deviation rate, 36% fabrication rate for pre-IPO data.*
+        """)
 
 else:
     # Instructions when no query - cleaner layout
