@@ -256,31 +256,28 @@ with tab1:
     def get_pipeline():
         return QueryPipeline()
 
-    # Sample questions
-    SAMPLE_QUESTIONS = [
-        "What was Airbnb's total revenue in fiscal year 2019?",
-        "How many Dashers were on DoorDash's platform at IPO?",
-        "What are Snowflake's main risk factors?",
-        "What was Rivian's net loss in 2020?",
-        "Who were Palantir's largest customers?",
-    ]
+    # Sample questions - use selectbox for reliability
+    SAMPLE_QUESTIONS = {
+        "Select a question...": "",
+        "Airbnb: Total revenue in fiscal 2019?": "What was Airbnb's total revenue in fiscal year 2019?",
+        "DoorDash: How many Dashers at IPO?": "How many Dashers were on DoorDash's platform at IPO?",
+        "Snowflake: Main risk factors?": "What are Snowflake's main risk factors?",
+        "Rivian: Net loss in 2020?": "What was Rivian's net loss in 2020?",
+        "Palantir: Largest customers?": "Who were Palantir's largest customers?",
+    }
 
-    if "selected_question" not in st.session_state:
-        st.session_state.selected_question = ""
+    selected = st.selectbox(
+        "Pick a sample question or type your own below:",
+        options=list(SAMPLE_QUESTIONS.keys()),
+        key="tab1_select"
+    )
 
-    st.markdown("##### Try a sample question:")
-    sample_cols = st.columns(5)
-    short_labels = ["Airbnb Revenue", "DoorDash Dashers", "Snowflake Risks", "Rivian Loss", "Palantir Customers"]
-    for i, sample_q in enumerate(SAMPLE_QUESTIONS):
-        with sample_cols[i]:
-            if st.button(short_labels[i], key=f"sample_{i}", help=sample_q, use_container_width=True):
-                st.session_state.selected_question = sample_q
-                st.rerun()
+    # Get the full question from selection
+    selected_q = SAMPLE_QUESTIONS.get(selected, "")
 
-    default_q = st.session_state.selected_question if st.session_state.selected_question else ""
     question = st.text_input(
-        "Or type your own question:",
-        value=default_q,
+        "Question:",
+        value=selected_q,
         placeholder="e.g., What was Airbnb's revenue in 2019?",
         key="tab1_question"
     )
@@ -408,31 +405,27 @@ with tab2:
     st.markdown("### Does Model Choice Matter?")
     st.markdown("*Wang's paper uses only OpenAI. Let's test external validity across model families.*")
 
-    # Same 5 sample questions as Tab 1
-    st.markdown("##### Try a sample question:")
-    model_sample_cols = st.columns(5)
-    model_samples = [
-        "What was Airbnb's total revenue in fiscal year 2019?",
-        "How many Dashers were on DoorDash's platform at IPO?",
-        "What are Snowflake's main risk factors?",
-        "What was Rivian's net loss in 2020?",
-        "Who were Palantir's largest customers?",
-    ]
-    model_sample_labels = ["Airbnb Revenue", "DoorDash Dashers", "Snowflake Risks", "Rivian Loss", "Palantir Customers"]
+    # Same sample questions as Tab 1 - use selectbox
+    MODEL_SAMPLE_QUESTIONS = {
+        "Select a question...": "",
+        "Airbnb: Total revenue in fiscal 2019?": "What was Airbnb's total revenue in fiscal year 2019?",
+        "DoorDash: How many Dashers at IPO?": "How many Dashers were on DoorDash's platform at IPO?",
+        "Snowflake: Main risk factors?": "What are Snowflake's main risk factors?",
+        "Rivian: Net loss in 2020?": "What was Rivian's net loss in 2020?",
+        "Palantir: Largest customers?": "Who were Palantir's largest customers?",
+    }
 
-    if "model_question" not in st.session_state:
-        st.session_state.model_question = ""
+    selected2 = st.selectbox(
+        "Pick a sample question or type your own below:",
+        options=list(MODEL_SAMPLE_QUESTIONS.keys()),
+        key="tab2_select"
+    )
 
-    for i, (sample_q, label) in enumerate(zip(model_samples, model_sample_labels)):
-        with model_sample_cols[i]:
-            if st.button(label, key=f"model_sample_{i}", help=sample_q, use_container_width=True):
-                st.session_state.model_question = sample_q
-                st.rerun()
+    selected_q2 = MODEL_SAMPLE_QUESTIONS.get(selected2, "")
 
-    model_default_q = st.session_state.model_question if st.session_state.model_question else ""
     query2 = st.text_input(
-        "Or type your own question (will query GPT, Gemini, and Llama in parallel):",
-        value=model_default_q,
+        "Question (will query GPT, Gemini, and Llama in parallel):",
+        value=selected_q2,
         placeholder="What was Airbnb's total revenue in fiscal 2019?",
         key="tab2_query"
     )
