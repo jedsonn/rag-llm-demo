@@ -596,16 +596,27 @@ Be precise and concise. Include the dollar amount if applicable."""
         with st.expander("ℹ️ About this comparison"):
             st.markdown("""
             **Models tested:**
-            - **GPT-4.1-mini** (OpenAI) - Same family as Wang's paper
-            - **Gemini 2.5 Flash** (Google) - Different architecture
-            - **Llama 3.3 70B** (Meta via Groq) - Open source
 
-            **The question:** Does model choice affect hallucination rates?
+            | Model | Provider | Architecture | Training Data |
+            |-------|----------|--------------|---------------|
+            | **GPT-4.1-mini** | OpenAI | Transformer (closed) | Proprietary web data |
+            | **Gemini 2.5 Flash** | Google | Transformer + MoE | Google's web + multimodal data |
+            | **Llama 3.3 70B** | Meta | Transformer (open) | Open web data, different filtering |
 
-            **Why it matters:** If GPT, Gemini, and Llama give different answers, then:
-            1. Hallucination rates are model-dependent
-            2. Wang's findings may not generalize
-            3. Researchers should test across model families
+            **Why do architectures matter for validity?**
+
+            1. **Different training data** → Different "knowledge" encoded → Different answers to same question
+            2. **Different fine-tuning** → Different tendencies to hallucinate vs. admit uncertainty
+            3. **Different tokenization** → Numbers/dates processed differently → Numeric errors vary
+
+            **External Validity Concern:**
+
+            Wang's paper tests **only OpenAI models**. If Gemini and Llama show different hallucination patterns:
+            - The 48% deviation rate may be GPT-specific, not universal
+            - Some models may be better/worse for accounting tasks
+            - Practitioners choosing models need model-specific benchmarks
+
+            **Bottom line:** Testing across model families reveals whether hallucination is an *LLM problem* or a *specific model problem*.
             """)
 
     else:
