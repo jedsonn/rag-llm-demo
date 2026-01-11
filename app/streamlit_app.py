@@ -256,35 +256,41 @@ with tab1:
     def get_pipeline():
         return QueryPipeline()
 
-    # Sample questions - use selectbox for reliability
-    SAMPLE_QUESTIONS = {
-        "Select a question...": "",
-        "Airbnb: Total revenue in fiscal 2019?": "What was Airbnb's total revenue in fiscal year 2019?",
-        "DoorDash: How many Dashers at IPO?": "How many Dashers were on DoorDash's platform at IPO?",
-        "Snowflake: Main risk factors?": "What are Snowflake's main risk factors?",
-        "Rivian: Net loss in 2020?": "What was Rivian's net loss in 2020?",
-        "Palantir: Largest customers?": "Who were Palantir's largest customers?",
-    }
+    # Sample questions with 5 buttons
+    SAMPLE_QUESTIONS = [
+        ("Airbnb Revenue", "What was Airbnb's total revenue in fiscal year 2019?"),
+        ("DoorDash Dashers", "How many Dashers were on DoorDash's platform at IPO?"),
+        ("Snowflake Risks", "What are Snowflake's main risk factors?"),
+        ("Rivian Loss", "What was Rivian's net loss in 2020?"),
+        ("Palantir Customers", "Who were Palantir's largest customers?"),
+    ]
 
-    selected = st.selectbox(
-        "Pick a sample question or type your own below:",
-        options=list(SAMPLE_QUESTIONS.keys()),
-        key="tab1_select"
-    )
+    # Initialize session state
+    if "tab1_q" not in st.session_state:
+        st.session_state.tab1_q = ""
 
-    # Get the full question from selection
-    selected_q = SAMPLE_QUESTIONS.get(selected, "")
+    # Show 5 buttons
+    st.markdown("**Click a sample question:**")
+    cols = st.columns(5)
+    for i, (label, full_q) in enumerate(SAMPLE_QUESTIONS):
+        with cols[i]:
+            if st.button(label, key=f"t1_btn_{i}", use_container_width=True):
+                st.session_state.tab1_q = full_q
 
+    # Text input uses session state value
     question = st.text_input(
-        "Question:",
-        value=selected_q,
+        "Or type your own:",
+        value=st.session_state.tab1_q,
         placeholder="e.g., What was Airbnb's revenue in 2019?",
-        key="tab1_question"
     )
+
+    # Update session state if user typed something different
+    if question != st.session_state.tab1_q:
+        st.session_state.tab1_q = question
 
     col_spacer, col_button, col_spacer2 = st.columns([3, 1, 3])
     with col_button:
-        compare_button = st.button("🔍 Compare", type="primary", use_container_width=True, key="tab1_btn")
+        compare_button = st.button("🔍 Compare", type="primary", use_container_width=True, key="tab1_compare")
 
     st.markdown("---")
 
@@ -405,34 +411,41 @@ with tab2:
     st.markdown("### Does Model Choice Matter?")
     st.markdown("*Wang's paper uses only OpenAI. Let's test external validity across model families.*")
 
-    # Same sample questions as Tab 1 - use selectbox
-    MODEL_SAMPLE_QUESTIONS = {
-        "Select a question...": "",
-        "Airbnb: Total revenue in fiscal 2019?": "What was Airbnb's total revenue in fiscal year 2019?",
-        "DoorDash: How many Dashers at IPO?": "How many Dashers were on DoorDash's platform at IPO?",
-        "Snowflake: Main risk factors?": "What are Snowflake's main risk factors?",
-        "Rivian: Net loss in 2020?": "What was Rivian's net loss in 2020?",
-        "Palantir: Largest customers?": "Who were Palantir's largest customers?",
-    }
+    # Same 5 sample questions with buttons
+    MODEL_SAMPLE_QUESTIONS = [
+        ("Airbnb Revenue", "What was Airbnb's total revenue in fiscal year 2019?"),
+        ("DoorDash Dashers", "How many Dashers were on DoorDash's platform at IPO?"),
+        ("Snowflake Risks", "What are Snowflake's main risk factors?"),
+        ("Rivian Loss", "What was Rivian's net loss in 2020?"),
+        ("Palantir Customers", "Who were Palantir's largest customers?"),
+    ]
 
-    selected2 = st.selectbox(
-        "Pick a sample question or type your own below:",
-        options=list(MODEL_SAMPLE_QUESTIONS.keys()),
-        key="tab2_select"
-    )
+    # Initialize session state
+    if "tab2_q" not in st.session_state:
+        st.session_state.tab2_q = ""
 
-    selected_q2 = MODEL_SAMPLE_QUESTIONS.get(selected2, "")
+    # Show 5 buttons
+    st.markdown("**Click a sample question:**")
+    cols2 = st.columns(5)
+    for i, (label, full_q) in enumerate(MODEL_SAMPLE_QUESTIONS):
+        with cols2[i]:
+            if st.button(label, key=f"t2_btn_{i}", use_container_width=True):
+                st.session_state.tab2_q = full_q
 
+    # Text input
     query2 = st.text_input(
-        "Question (will query GPT, Gemini, and Llama in parallel):",
-        value=selected_q2,
+        "Or type your own (queries GPT, Gemini, Llama in parallel):",
+        value=st.session_state.tab2_q,
         placeholder="What was Airbnb's total revenue in fiscal 2019?",
-        key="tab2_query"
     )
+
+    # Update session state if user typed something different
+    if query2 != st.session_state.tab2_q:
+        st.session_state.tab2_q = query2
 
     col_s1, col_btn, col_s2 = st.columns([3, 1, 3])
     with col_btn:
-        model_compare_btn = st.button("🔬 Compare Models", type="primary", use_container_width=True, key="tab2_btn")
+        model_compare_btn = st.button("🔬 Compare Models", type="primary", use_container_width=True, key="tab2_compare")
 
     st.markdown("---")
 
