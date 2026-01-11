@@ -91,20 +91,20 @@ def query_gemini(question: str, timeout: float = 15.0) -> Dict:
         if not GEMINI_API_KEY:
             return {
                 "answer": "No Gemini API key configured",
-                "model": "Gemini",
+                "model": "Gemini-2.5",
                 "success": False,
                 "elapsed_time": 0
             }
 
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
 
         response = model.generate_content(question)
 
         elapsed = time.time() - start_time
         return {
             "answer": response.text,
-            "model": "Gemini",
+            "model": "Gemini-2.5",
             "success": True,
             "elapsed_time": elapsed
         }
@@ -113,7 +113,7 @@ def query_gemini(question: str, timeout: float = 15.0) -> Dict:
         logger.error(f"Gemini error: {e}")
         return {
             "answer": f"Error: {str(e)[:100]}",
-            "model": "Gemini",
+            "model": "Gemini-2.5",
             "success": False,
             "elapsed_time": elapsed
         }
