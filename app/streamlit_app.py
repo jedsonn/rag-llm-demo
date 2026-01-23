@@ -1,7 +1,7 @@
 """
-Streamlit Web UI for RAG vs Raw LLM Demo
+Streamlit Web UI for RAG vs LLM Demo
 
-Tab 1: Core Finding - RAG vs Raw LLM comparison
+Tab 1: Core Finding - RAG vs LLM comparison
 Tab 2: Model Comparison - Same query across multiple LLM providers
 
 Includes hallucination detection inspired by Wang (UT Austin) paper.
@@ -334,7 +334,7 @@ with tab1:
                 st.error("Failed - Check API key")
 
         with col2:
-            st.markdown('<div class="column-header rag-only-header">📄 RAG Only</div>', unsafe_allow_html=True)
+            st.markdown('<div class="column-header rag-only-header">📄 Retrieval Only</div>', unsafe_allow_html=True)
             if rag_only_score["score"] is not None:
                 st.markdown(f'''
                 <div class="score-box" style="background-color: {rag_only_score["color"]}15; border: 2px solid {rag_only_score["color"]};">
@@ -394,9 +394,9 @@ with tab1:
             st.markdown("""
             | Column | What it shows |
             |--------|---------------|
-            | **🧠 Raw LLM** | Direct query - may hallucinate |
-            | **📄 RAG Only** | Retrieved chunks - read the source |
-            | **✨ RAG + LLM** | Grounded answer from SEC filings |
+            | **🧠 LLM Only** | Direct query - may hallucinate |
+            | **📄 Retrieval Only** | Retrieved chunks - read the source |
+            | **✨ RAG (Retrieval + LLM)** | Grounded answer from SEC filings |
             """)
         with right_col:
             st.markdown("#### Data Sources")
