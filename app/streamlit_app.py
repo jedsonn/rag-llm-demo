@@ -355,7 +355,7 @@ with tab1:
                 st.error("Failed to retrieve chunks")
 
         with col3:
-            st.markdown('<div class="column-header rag-llm-header">✨ RAG + LLM</div>', unsafe_allow_html=True)
+            st.markdown('<div class="column-header rag-llm-header">✨ RAG</div>', unsafe_allow_html=True)
             if rag_llm_score["score"] is not None:
                 st.markdown(f'''
                 <div class="score-box" style="background-color: {rag_llm_score["color"]}15; border: 2px solid {rag_llm_score["color"]};">
